@@ -41,3 +41,7 @@ The following features need to be added:
 * Graceful handling for if the Google Sheet is not set up with the proper tabs
 * Logic for the plots that vary the x-axis markers based on how many days of data are included (if a month or more of data is included, then set the breaks to be weekly rather than daily)
 * A Shiny app that will do the work of `visualize-speedtest.Rmd` so the user can check their results without launching R.
+
+## Scheduling
+
+Once `run-speedtest.R` is configured and working, it can be scheduled using the `cronR` package on the Mac or using Task Scheduler on Windows. The schedule can be set up for any frequency. I set it up for hourly, but it could be daily or weekly or even be changed over time.
