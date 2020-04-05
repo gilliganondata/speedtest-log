@@ -5,7 +5,8 @@
 # This code is largely based on what is posted at
 # https://github.com/hrbrmstr/speedtest
 
-# Setup
+# Setup. The speedtest package is not on CRAN, and googlesheets4 v0.2.0.9000 or later
+# is needed in order to get the 'sheets_append' function.
 # devtools::install_github("hrbrmstr/speedtest")
 # devtools::install_github("tidyverse/googlesheets4")
 library(speedtest)
@@ -15,10 +16,19 @@ library(googlesheets4)
 # Get the ID for an existing Google Sheet that will have the results logged to it. This should
 # be stored in the .Renviron file, or it can be hard-coded below.
 
-# IMPORTANT: This Google Sheet needs to have a sheet named "Download Data" and a sheet named "Upload Data"
+##############
+# IMPORTANT: This Google Sheet needs to have a sheet named "Download Data" and a sheet named "Upload Data."
+# The technique below expects this ID to be recorded in .Renviron more another environment file in a 
+# variable called "SPEEDTEST_GSHEET." Alternatively, you can just hardcode the Google Sheets ID in a variable:
+# gsheet <- "[sheet ID]"
+
 gsheet <- Sys.getenv("SPEEDTEST_GSHEET")
 
-# Set the number of servers to run on. There will be 10 tests per server
+#############
+
+# Set the number of servers to run on. There will be 10 tests per server run for the download tests
+# and 6 tests per server run for the upload tests. So, this really just controls the volume
+# of data captured and how long it takes for the script to run.
 num_servers = 5
 
 # Get the client configuration for the test
@@ -50,12 +60,14 @@ rm(download_new, upload_new)
 download_test <- download_test %>% mutate(test_time = Sys.time())
 upload_test <- upload_test %>% mutate(test_time = Sys.time())
 
-# Eventually, update to use error checking to determine if the sheet
-# exists AND if there is any data in each one.
+# Eventually, this should be updated to use error checking to determine if the sheet
+# exists AND if there is any data in each one. But, for now, it's counting on a clean
+# setup.
 download_data_check <- sheets_read(gsheet, "Download Data")
 upload_data_check <- sheets_read(gsheet, "Upload Data")
 
-# If this is the first time to add data, then write the data; otherwise, append
+# If this is the first time to add data, then write the data (which will include the columns).; 
+# Otherwise, just append the new data to what is already there.
 if(nrow(download_data_check) == 0){
   sheets_write(download_test, gsheet, "Download Data")
 } else {
