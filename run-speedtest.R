@@ -2,9 +2,6 @@
 # This script is intended to be scheduled to run on a recurring schedule so that
 # speeds and their variability can be tracked over time.
 
-# This code is largely based on what is posted at
-# https://github.com/hrbrmstr/speedtest
-
 # Setup. The speedtest package is not on CRAN, and googlesheets4 v0.2.0.9000 or later
 # is needed in order to get the 'sheets_append' function.
 # devtools::install_github("hrbrmstr/speedtest")
