@@ -47,7 +47,7 @@ theme_plot <- theme_minimal() +
         axis.text.y = element_text(colour = "gray30", face = "bold", size = 10))
 
 # Function to build a plot summary of either a download or an upload test
-get_plot <- function(test_data){
+get_plot_ts <- function(test_data){
   
   # Determine if this is an upload dataset or download dataset so the plot can be labeled appropriately
   if(test_data$test[[1]] == "download"){
@@ -89,18 +89,23 @@ get_plot <- function(test_data){
     scale_x_datetime(date_breaks = "1 days", date_labels = "%m/%d") +
     labs(title = paste(label_title, "Speed (Mbps) by Hour: The Overall Median Was", 
                        round(bw_median_overall,1), "Mbps"),
-         subtitle = "The Gray Bands Represent the Quartiles of the Hourly Tests",
+         subtitle = "The Gray Bands Represent the Quartiles for the Times Recorded in Each Hourly Test",
          y = paste("Median", label_title, "Speed (Mbps)")) +
     theme_plot
   
   gg
 }
 
-gg_download <- get_plot(download_data)
-gg_upload <- get_plot(upload_data)
+gg_download_ts <- get_plot_ts(download_data)
+gg_upload_ts <- get_plot_ts(upload_data)
 
-gg_download
-gg_upload
+gg_download_ts
+gg_upload_ts
 
+# gg_download_dist <- ggplot(download_data, aes(bw)) +
+#   geom_histogram() +
+#   theme_plot
+# 
+# gg_download_dist
 
 ```

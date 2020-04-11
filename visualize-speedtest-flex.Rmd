@@ -1,0 +1,208 @@
+---
+title: "Scheduled SpeedTest Results"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+  runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(lubridate)
+library(googlesheets4)
+
+# Get the ID for the Google Sheet where the results are stored. The technique below expects this
+# ID to be recorded in .Renviron more another environment file in a variable called "SPEEDTEST_GSHEET."
+# Alternatively, you can just hardcode the Google Sheets ID in a variable:
+# gsheet <- "[sheet ID]"
+gsheet <- Sys.getenv("SPEEDTEST_GSHEET")
+
+# Set the timezone for displaying the results
+timezone <- "America/New_York"
+
+# Get the data
+download_data <- sheets_read(gsheet, "Download Data")
+upload_data <- sheets_read(gsheet, "Upload Data")
+# 
+# saveRDS(download_data, "download_data.rds")
+# saveRDS(upload_data, "upload_data.rds")
+# 
+# download_data <- readRDS("download_data.rds")
+# upload_data <- readRDS("upload_data.rds")
+
+
+# Set up theme
+theme_plot <- theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.subtitle = element_text(face = "italic", colour = "gray40"),
+        panel.grid.major.x = element_line(),
+        panel.grid.minor.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(colour = "gray40", margin = margin(0, 5, 0, 0, "pt")),
+        axis.text.y = element_text(colour = "gray30", face = "bold", size = 10))
+
+
+# Function to build a plot summary of either a download or an upload test
+get_plot_ts <- function(test_data, timespan = c(1,100) , granularity = "Hour",
+                        min_max = TRUE, quartiles_2_3 = TRUE){
+  
+  # Determine if this is an upload dataset or download dataset so the plot can be labeled appropriately
+  if(test_data$test[[1]] == "download"){
+    label_title <- "Download"
+  } else {
+    label_title <- "Upload"
+  }
+  
+  # Update the timezone to display in the timezome specified in the setup
+  test_data <- test_data %>% 
+    mutate(test_time = force_tz(test_time, timezone))
+  
+  # We're allowing the breadth of the timeframe to be adjusted. This is the "start %" and the
+  # "end %," so filter the data to whatever is selected.
+  start_overall <- min(test_data$test_time)
+  end_overall <- max(test_data$test_time)
+  time_range <- end_overall - start_overall
+  
+  start_filter <- start_overall + time_range * timespan[1]/100
+  end_filter <- start_overall + time_range * timespan[2]/100
+  
+  test_data <- test_data %>% 
+    filter(test_time >= start_filter & test_time <= end_filter)
+  
+  # # Change the granularity of the data
+  # test_data <- test_data %>%
+  #   mutate(test_time = ifelse(granularity == "Hour", test_time, 
+  #                             ifelse(granularity == "Day", as.Date(test_time), test_time))) %>%
+  #   mutate(test_time = as.POSIXct(test_time))
+  
+  # Get summary statistics for each round of tests
+  data_viz_df <- test_data %>% 
+    group_by(test_time) %>% 
+    summarize(bw_median = median(bw),
+              bw_mean = mean(bw),  # Note used, but adding for giggles if we wanted to chat mean vs median
+              bw_min = min(bw),
+              bw_first_quartile = quantile(bw, .25),
+              bw_third_quartile = quantile(bw, .75),
+              bw_max = max(bw))
+  
+  # Get the overall median of all tests for a horizonal line
+  bw_median_overall <- median(test_data$bw)
+  
+  # Build the plot
+  gg <- ggplot(data_viz_df, 
+               aes(x = test_time, y = bw_median, 
+                   ymin = bw_first_quartile, ymax = bw_third_quartile)) +
+    
+    # 1st and 4th quartiles
+    geom_ribbon(aes(ymin = bw_min, ymax = bw_max), 
+                fill = ifelse(min_max == TRUE,"gray80", NA), alpha = 0.3) +
+    
+    # 2nd and 3rd quartile
+    geom_ribbon(fill = ifelse(quartiles_2_3 == TRUE,"gray70", NA), alpha = 0.4) +
+    
+    # Overall Median
+    geom_hline(mapping = aes(yintercept = bw_median_overall),
+               linetype = "dashed", colour = "gray60", size = 0.7) +
+    # Median by Hour
+    geom_line(color = "#BF5700", size = 1) +    # Hook 'em Horns!
+    scale_x_datetime(date_breaks = "1 days", date_labels = "%m/%d") +
+    labs(title = paste("The Median", label_title, "Speed Was", 
+                       round(bw_median_overall,1), "Mbps"),
+         y = paste("Median", label_title, "Speed (Mbps)")) +
+    theme_plot
+  
+  gg
+}
+
+gg_upload <- get_plot_ts(upload_data)
+
+```
+
+Sidebar {.sidebar}
+=======================================================================
+
+Use the settings below to manipulate the data.
+
+
+```{r}
+
+# Rate at which to flag high download traffic
+sliderInput("timespan", "Adjust Timeframe Start/End:",
+            min = 1, max = 100, value = c(1,100), step = 1
+)
+
+# How to Break up the timeframe data
+selectInput("granularity", "Timeframe Granularity", c("Hour", "Day", "Week"),
+            selected = "Hour")
+
+# Select which quartiles to show
+checkboxInput("min_max", "Show Min/Max Range", value = TRUE)
+checkboxInput("quartiles_2_3", "Show 2nd and 3rd Quartiles", value = TRUE)
+
+```
+
+
+SpeedTest Results
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+### Download Speed (Mbps) Over Time
+
+```{r}
+
+get_download_ts <- reactive({
+  timespan <- input$timespan
+  granularity <- input$granularity
+  min_max <- input$min_max
+  quartiles_2_3 <- input$quartiles_2_3
+  get_plot_ts(download_data, timespan, granularity, min_max, quartiles_2_3)
+})  
+
+output$download_ts <- renderPlot({
+  get_download_ts()
+})
+
+plotOutput("download_ts")
+
+```
+
+### Distribution of Download Speeds
+
+```{r}
+
+# output$min_max_value <- renderPrint({input$min_max})
+# 
+# verbatimTextOutput("min_max_value")
+
+```
+
+
+Row
+-----------------------------------------------------------------------
+
+### Upload Speed Over Time
+
+```{r}
+
+get_upload_ts <- reactive({
+  timespan <- input$timespan
+  granularity <- input$granularity
+  min_max <- input$min_max
+  quartiles_2_3 <- input$quartiles_2_3
+  get_plot_ts(upload_data, timespan, granularity, min_max, quartiles_2_3)
+})  
+
+output$upload_ts <- renderPlot({
+  get_upload_ts()
+})
+
+plotOutput("upload_ts")
+
+
+```
+
+### Distribution of Upload Speeds
