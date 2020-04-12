@@ -11,6 +11,7 @@ output:
 library(flexdashboard)
 library(tidyverse)
 library(lubridate)
+library(scales)
 library(googlesheets4)
 
 # Get the ID for the Google Sheet where the results are stored. The technique below expects this
@@ -22,19 +23,24 @@ gsheet <- Sys.getenv("SPEEDTEST_GSHEET")
 # Set the timezone for displaying the results
 timezone <- "America/New_York"
 
-# Get the data
-download_data <- sheets_read(gsheet, "Download Data")
-upload_data <- sheets_read(gsheet, "Upload Data")
-# 
+# Get the data and adjust the timezone
+download_data <- sheets_read(gsheet, "Download Data") %>%
+      mutate(test_time = with_tz(test_time, timezone))
+
+upload_data <- sheets_read(gsheet, "Upload Data") %>%
+      mutate(test_time = with_tz(test_time, timezone))
+
+# For faster loading, comment out the above after the data is downloaded and just
+# save a local--static--file.
+
 # saveRDS(download_data, "download_data.rds")
 # saveRDS(upload_data, "upload_data.rds")
 # 
 # download_data <- readRDS("download_data.rds")
 # upload_data <- readRDS("upload_data.rds")
 
-
-# Set up theme
-theme_plot <- theme_minimal() +
+# Set up theme for the time-series
+theme_ts <- theme_minimal() +
   theme(plot.title.position = "plot",
         plot.subtitle = element_text(face = "italic", colour = "gray40"),
         panel.grid.major.x = element_line(),
@@ -43,21 +49,15 @@ theme_plot <- theme_minimal() +
         axis.title.y = element_text(colour = "gray40", margin = margin(0, 5, 0, 0, "pt")),
         axis.text.y = element_text(colour = "gray30", face = "bold", size = 10))
 
+# Set up theme for the histogram based on the time-series theme
+theme_hist <- theme_ts +
+  theme(axis.title.x = element_text(colour = "gray40", margin = margin(5, 0, 0, 0, "pt")),
+        axis.text.x = element_text(colour = "gray30", face = "bold", size = 10),
+        axis.text.y = element_text(colour = "gray30", face = "plain", size = 10))
 
-# Function to build a plot summary of either a download or an upload test
-get_plot_ts <- function(test_data, timespan = c(1,100) , granularity = "Hour",
+# Function to build a time-series summary of either a download or an upload test
+get_plot_ts <- function(test_data, test_type = "Unspecified", timespan = c(1,100) , granularity = "Hour",
                         min_max = TRUE, quartiles_2_3 = TRUE){
-  
-  # Determine if this is an upload dataset or download dataset so the plot can be labeled appropriately
-  if(test_data$test[[1]] == "download"){
-    label_title <- "Download"
-  } else {
-    label_title <- "Upload"
-  }
-  
-  # Update the timezone to display in the timezome specified in the setup
-  test_data <- test_data %>% 
-    mutate(test_time = force_tz(test_time, timezone))
   
   # We're allowing the breadth of the timeframe to be adjusted. This is the "start %" and the
   # "end %," so filter the data to whatever is selected.
@@ -71,23 +71,26 @@ get_plot_ts <- function(test_data, timespan = c(1,100) , granularity = "Hour",
   test_data <- test_data %>% 
     filter(test_time >= start_filter & test_time <= end_filter)
   
-  # # Change the granularity of the data
-  # test_data <- test_data %>%
-  #   mutate(test_time = ifelse(granularity == "Hour", test_time, 
-  #                             ifelse(granularity == "Day", as.Date(test_time), test_time))) %>%
-  #   mutate(test_time = as.POSIXct(test_time))
-  
+  # Change the granularity of the data
+  test_data$test_time <- if(granularity == "Hour"){
+    round_date(test_data$test_time, unit = "hour")
+  } else if(granularity == "Day"){
+    floor_date(test_data$test_time, unit = "day")
+  } else {
+    floor_date(test_data$test_time, unit = "week", week_start = 7)
+  }
+
   # Get summary statistics for each round of tests
   data_viz_df <- test_data %>% 
     group_by(test_time) %>% 
     summarize(bw_median = median(bw),
-              bw_mean = mean(bw),  # Note used, but adding for giggles if we wanted to chat mean vs median
+              bw_mean = mean(bw),  # Not used, but adding for giggles if we wanted to chat mean vs median
               bw_min = min(bw),
               bw_first_quartile = quantile(bw, .25),
               bw_third_quartile = quantile(bw, .75),
-              bw_max = max(bw))
+              bw_max = max(bw)) 
   
-  # Get the overall median of all tests for a horizonal line
+    # Get the overall median of all tests for a horizonal line
   bw_median_overall <- median(test_data$bw)
   
   # Build the plot
@@ -107,16 +110,53 @@ get_plot_ts <- function(test_data, timespan = c(1,100) , granularity = "Hour",
                linetype = "dashed", colour = "gray60", size = 0.7) +
     # Median by Hour
     geom_line(color = "#BF5700", size = 1) +    # Hook 'em Horns!
-    scale_x_datetime(date_breaks = "1 days", date_labels = "%m/%d") +
-    labs(title = paste("The Median", label_title, "Speed Was", 
+    scale_x_datetime(date_breaks = ifelse(granularity == "Week", "1 weeks", "1 days"), date_labels = "%m/%d") +
+    labs(title = paste("The Median", test_type, "Speed Was", 
                        round(bw_median_overall,1), "Mbps"),
-         y = paste("Median", label_title, "Speed (Mbps)")) +
-    theme_plot
+         y = paste("Median", test_type, "Speed (Mbps)")) +
+    theme_ts
   
   gg
 }
 
-gg_upload <- get_plot_ts(upload_data)
+
+# Function to build a histogram of either a download or an upload test
+get_plot_hist <- function(test_data, test_type = "Unspecified", timespan = c(1,100)){
+  
+  # We're allowing the breadth of the timeframe to be adjusted. This is the "start %" and the
+  # "end %," so filter the data to whatever is selected.
+  start_overall <- min(test_data$test_time)
+  end_overall <- max(test_data$test_time)
+  time_range <- end_overall - start_overall
+  
+  start_filter <- start_overall + time_range * timespan[1]/100
+  end_filter <- start_overall + time_range * timespan[2]/100
+  
+  test_data <- test_data %>% 
+    filter(test_time >= start_filter & test_time <= end_filter)
+  
+  # Get the overall mean of all tests a vergical line
+  bw_mean <- median(test_data$bw)
+  
+  # Build the histogram
+  gg <- ggplot(test_data, aes(x = bw)) +
+    
+    # The histogram itself
+    geom_histogram(fill = "#BF5700", alpha = 0.7) +
+    
+    # Overall mean
+    geom_vline(mapping = aes(xintercept = bw_mean),
+               linetype = "dashed", colour = "gray60", size = 0.7) +
+    scale_y_continuous(label = comma) +
+    labs(title = paste("The Mean", test_type, "Speed Was", 
+                       round(bw_mean, 1), "Mbps"),
+         x = paste("Mean", test_type, "Speed (Mbps)"),
+         y = "# of Tests") +
+    theme_hist
+  
+  gg
+}
+
 
 ```
 
@@ -159,7 +199,12 @@ get_download_ts <- reactive({
   granularity <- input$granularity
   min_max <- input$min_max
   quartiles_2_3 <- input$quartiles_2_3
-  get_plot_ts(download_data, timespan, granularity, min_max, quartiles_2_3)
+  get_plot_ts(download_data, 
+              test_type = "Download",
+              timespan = timespan, 
+              granularity = granularity, 
+              min_max = min_max, 
+              quartiles_2_3 = quartiles_2_3)
 })  
 
 output$download_ts <- renderPlot({
@@ -174,9 +219,18 @@ plotOutput("download_ts")
 
 ```{r}
 
-# output$min_max_value <- renderPrint({input$min_max})
-# 
-# verbatimTextOutput("min_max_value")
+get_download_hist <- reactive({
+  timespan <- input$timespan
+  get_plot_hist(download_data, 
+              test_type = "Download",
+              timespan = timespan)
+})  
+
+output$download_hist <- renderPlot({
+  get_download_hist()
+})
+
+plotOutput("download_hist")
 
 ```
 
@@ -193,7 +247,7 @@ get_upload_ts <- reactive({
   granularity <- input$granularity
   min_max <- input$min_max
   quartiles_2_3 <- input$quartiles_2_3
-  get_plot_ts(upload_data, timespan, granularity, min_max, quartiles_2_3)
+  get_plot_ts(upload_data, "Upload", timespan, granularity, min_max, quartiles_2_3)
 })  
 
 output$upload_ts <- renderPlot({
@@ -206,3 +260,20 @@ plotOutput("upload_ts")
 ```
 
 ### Distribution of Upload Speeds
+
+```{r}
+
+get_upload_hist <- reactive({
+  timespan <- input$timespan
+  get_plot_hist(upload_data, 
+              test_type = "Upload",
+              timespan = timespan)
+})  
+
+output$upload_hist <- renderPlot({
+  get_upload_hist()
+})
+
+plotOutput("upload_hist")
+
+```
