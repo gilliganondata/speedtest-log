@@ -37,3 +37,8 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# Other files that are temporary
+*.rds
+*.log
+*.html
