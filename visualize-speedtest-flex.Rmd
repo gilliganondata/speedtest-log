@@ -4,11 +4,12 @@ output:
   flexdashboard::flex_dashboard:
     orientation: rows
     vertical_layout: fill
-  runtime: shiny
+runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
 library(flexdashboard)
+library(shiny)
 library(tidyverse)
 library(lubridate)
 library(scales)
@@ -24,20 +25,19 @@ gsheet <- Sys.getenv("SPEEDTEST_GSHEET")
 timezone <- "America/New_York"
 
 # Get the data and adjust the timezone
-# download_data <- sheets_read(gsheet, "Download Data") %>%
-#       mutate(test_time = with_tz(test_time, timezone))
-# 
-# upload_data <- sheets_read(gsheet, "Upload Data") %>%
-#       mutate(test_time = with_tz(test_time, timezone))
+download_data <- sheets_read(gsheet, "Download Data") %>%
+      mutate(test_time = with_tz(test_time, timezone))
+
+upload_data <- sheets_read(gsheet, "Upload Data") %>%
+      mutate(test_time = with_tz(test_time, timezone))
 
 # For faster loading, comment out the above after the data is downloaded and just
 # save a local--static--file.
-
 # saveRDS(download_data, "download_data.rds")
 # saveRDS(upload_data, "upload_data.rds")
 # 
-download_data <- readRDS("download_data.rds")
-upload_data <- readRDS("upload_data.rds")
+# download_data <- readRDS("download_data.rds")
+# upload_data <- readRDS("upload_data.rds")
 
 # Set up theme for the time-series
 theme_ts <- theme_minimal() +
