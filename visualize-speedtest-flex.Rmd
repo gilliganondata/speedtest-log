@@ -4,6 +4,7 @@ output:
   flexdashboard::flex_dashboard:
     orientation: rows
     vertical_layout: fill
+    css: styles.css
 runtime: shiny
 ---
 
@@ -304,7 +305,7 @@ get_upload_ts <- reactive({
   granularity <- input$granularity
   min_max <- input$min_max
   quartiles_2_3 <- input$quartiles_2_3
-  get_plot_ts(download_data, 
+  get_plot_ts(upload_data, 
               test_type = "Download",
               time_type = "All",
               timespan = timespan, 
@@ -333,7 +334,7 @@ get_upload_hour <- reactive({
   granularity <- input$granularity
   min_max <- input$min_max
   quartiles_2_3 <- input$quartiles_2_3
-  get_plot_ts(download_data, 
+  get_plot_ts(upload_data, 
               test_type = "Upload",
               time_type = "Hour of Day",
               timespan = timespan, 
