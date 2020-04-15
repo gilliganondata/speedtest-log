@@ -56,7 +56,7 @@ The histograms look something like the following:
 
 The Shiny app is more interactive and allows subsetting the data using a simple slider. And, it supports some simple adjustments to the visualization: turning on/off the quartile bands.
 
-It also includes a plot by hour-of-day (my son pointed theorized that bandwidth may vary based on peak usage times, similar to electricity).
+It also includes a plot by hour-of-day (my son theorized that bandwidth may vary based on peak usage times, similar to electricity).
 
 ![](images/shiny-download.png)
 
