@@ -13,7 +13,7 @@ The code to run the speed tests is largely based on what is posted at https://gi
 
 ## Requirements
 
-In addition to the packages used (as commented in the `run-speedtest` file, they are not all on CRAN as of this writing), a Google Sheet needs to be created with two tabs:
+In addition to the packages used (as commented in the `run-speedtest.R` file, they are not all on CRAN as of this writing), a Google Sheet needs to be created with two tabs:
 
 * **Download Data** -- this is where the results of the download speed tests will be stored and read
 * **Upload Data** -- this is where the results of the upload speed tests will be stored and read
@@ -25,6 +25,16 @@ Because it's horrible form to store such an ID in public code, both of the files
 You can create the same variable by opening your `.Renviron` file and adding a line to it:
 
 `SPEEDTEST_GSHEET = "[the ID for your Google Sheet]"`
+
+## Scheduling the Tests to Run
+
+Once `run-speedtest.R` is configured and working, it can be scheduled using the `cronR` package on the Mac or using Task Scheduler on Windows. The schedule can be set up for any frequency. I set it up for hourly, but it could be daily or weekly or even be changed over time.
+
+This does simply build a data set stored in Google Sheets that grows indefinitely over time. The larger the Google Sheet, the longer it takes the RNotebook to run or the Shiny app to load. There are two settings in `run-speedtest.R` to limit the growth of this data:
+
+* `num_servers` -- this controls how many tests are run; technically, it controls how many different servers the standard set of SpeedTest tests get run on. If you just run SpeedTest from [speedtest.net](https://www.speedtest.net/), the system picks the "best" server and just runs the test on that. This script lets you specify how many servers to run the tests on just to get a broader read on your device's bandwidth.
+
+* `smaller_file` -- this is a simple TRUE/FALSE. If this is set to `TRUE`, then the script removes a number of columns from the SpeedTest data before pushing the results to the Google Sheet. This cuts the size of the dataset by ~2/3.
 
 ## Output - RNotebook
 
@@ -57,14 +67,4 @@ It also includes a plot by hour-of-day (my son pointed theorized that bandwidth 
 The following features need to be added:
 
 * Graceful handling for if the Google Sheet is not set up with the proper tabs
-
-## Scheduling
-
-Once `run-speedtest.R` is configured and working, it can be scheduled using the `cronR` package on the Mac or using Task Scheduler on Windows. The schedule can be set up for any frequency. I set it up for hourly, but it could be daily or weekly or even be changed over time.
-
-This does simply build a data set stored in Google Sheets that grows indefinitely over time. The larger the Google Sheet, the longer it takes the RNotebook to run or the Shiny app to load. There are two settings in `run-speedtest.R` to limit the growth of this data:
-
-* `num_servers` -- this controls how many tests are run; technically, it controls how many different servers the standard set of SpeedTest tests get run on. If you just run SpeedTest from [speedtest.net](https://www.speedtest.net/), the system picks the "best" server and just runs the test on that. This script lets you specify how many servers to run the tests on just to get a broader read on your device's bandwidth.
-
-* `smaller_file` -- this is a simple TRUE/FALSE. If this is set to `TRUE`, then the script removes a number of columns from the SpeedTest data before pushing the results to the Google Sheet. This cuts the size of the dataset by ~2/3.
 
