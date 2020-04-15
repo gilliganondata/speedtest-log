@@ -4,17 +4,31 @@ output:
   flexdashboard::flex_dashboard:
     orientation: rows
     vertical_layout: fill
+    navbar:
+      - { icon: "fa-github", title: "Source code", href: "https://github.com/gilliganondata/speedtest-log/", align: right }
     css: styles.css
+    includes:
+      after_body: tracking.html
 runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
+
+# The includes:
+#       after_body: tracking.html
+# in the YAML is to enable dropping digital analytics tracking code such as Google Analytics
+# into the Shiny app. In order for this to work, a tracking.html file needs to be included
+# in the working directory with the appropriate tracking script.
+
 library(flexdashboard)
 library(shiny)
 library(tidyverse)
 library(lubridate)
 library(scales)
 library(googlesheets4)
+
+# Assumes the Google Sheet with the data has been made public (view only / with link)
+sheets_deauth()
 
 # Get the ID for the Google Sheet where the results are stored. The technique below expects this
 # ID to be recorded in .Renviron more another environment file in a variable called "SPEEDTEST_GSHEET."
@@ -207,7 +221,6 @@ checkboxInput("quartiles_2_3", "Show 2nd and 3rd Quartiles", value = TRUE)
 
 ```
 
-
 Download Test Results
 =======================================================================
 
@@ -268,7 +281,6 @@ output$download_hour <- renderPlot({
 plotOutput("download_hour")
 
 ```
-
 
 ### Distribution of Download Speeds
 

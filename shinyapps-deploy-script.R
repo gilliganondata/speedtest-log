@@ -3,9 +3,7 @@
 library(rsconnect)
 
 # Deploy the apps. 
-deployApp(appFiles = c("visualize-speedtest-flex.Rmd","styles.css"),
+deployApp(appFiles = c("visualize-speedtest-flex.Rmd", "styles.css", "tracking.html"),
           appName = "speedtest-results",
           appTitle = "SpeedTest Results",
           forceUpdate = TRUE)
-
-
