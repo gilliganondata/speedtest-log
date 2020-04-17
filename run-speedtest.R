@@ -81,15 +81,15 @@ upload_data_check <- sheets_read(gsheet, "Upload Data")
 # If this is the first time to add data, then write the data (which will include the columns).; 
 # Otherwise, just append the new data to what is already there.
 if(nrow(download_data_check) == 0){
-  sheets_write(download_test, gsheet, "Download Data")
+  sheet_write(gsheet, download_test, "Download Data")
 } else {
-  sheets_append(download_test, gsheet, "Download Data")
+  sheet_append(gsheet, download_test, "Download Data")
 }
 
 if(nrow(upload_data_check) == 0){
-  sheets_write(upload_test, gsheet, "Upload Data")
+  sheet_write(gsheet, upload_test, "Upload Data")
 } else {
-  sheets_append(upload_test, gsheet, "Upload Data")
+  sheet_append(gsheet, upload_test, "Upload Data")
 }
 
 
