@@ -43,22 +43,20 @@ servers <- spd_servers(config=config)
 best_servers <- spd_best_servers(servers = servers, config = config, max = num_servers)
 
 # Run the upload and download tests on each of those servers. The test will run 10 tests on
-# a single server at a time. I tried and tried to do this through purrr with no luck,
-# so cheesing out with a for loop
+# a single server at a time. 
+upload_test <- best_servers %>%
+  rowwise() %>%
+  do(spd_upload_test(as_tibble(.), config, summarise = FALSE) %>%
+       mutate(test_time = Sys.time())
+  ) %>%
+  ungroup()
 
-download_test <- spd_download_test(best_servers[1,], config=config, summarise = FALSE)
-upload_test <- spd_upload_test(best_servers[1,], config=config, summarise = FALSE)
-
-for(i in 2:nrow(best_servers)){
-  
-  download_new <- spd_download_test(best_servers[i, ], config=config, summarise = FALSE)
-  upload_new <- spd_upload_test(best_servers[i, ], config=config, summarise = FALSE)
-
-  download_test <- rbind(download_test, download_new)
-  upload_test <- rbind(upload_test, upload_new)
-}
-
-rm(download_new, upload_new)
+download_test <- best_servers %>%
+  rowwise() %>%
+  do(spd_download_test(as_tibble(.), config, summarise = FALSE) %>%
+       mutate(test_time = Sys.time())
+  ) %>%
+  ungroup()
 
 # Add a timestamp for when the tests were run
 download_test <- download_test %>% mutate(test_time = Sys.time())
@@ -75,8 +73,8 @@ if(smaller_file == TRUE){
 # Eventually, this should be updated to use error checking to determine if the sheet
 # exists AND if there is any data in each one. But, for now, it's counting on a clean
 # setup.
-download_data_check <- sheets_read(gsheet, "Download Data")
-upload_data_check <- sheets_read(gsheet, "Upload Data")
+download_data_check <- read_sheet(gsheet, "Download Data")
+upload_data_check <- read_sheet(gsheet, "Upload Data")
 
 # If this is the first time to add data, then write the data (which will include the columns).; 
 # Otherwise, just append the new data to what is already there.
@@ -91,5 +89,3 @@ if(nrow(upload_data_check) == 0){
 } else {
   sheet_append(gsheet, upload_test, "Upload Data")
 }
-
-
