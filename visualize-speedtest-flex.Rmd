@@ -318,7 +318,7 @@ get_upload_ts <- reactive({
   min_max <- input$min_max
   quartiles_2_3 <- input$quartiles_2_3
   get_plot_ts(upload_data, 
-              test_type = "Download",
+              test_type = "Upload",
               time_type = "All",
               timespan = timespan, 
               granularity = granularity, 
