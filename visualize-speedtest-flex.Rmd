@@ -7,8 +7,6 @@ output:
     navbar:
       - { icon: "fa-github", title: "Source code", href: "https://github.com/gilliganondata/speedtest-log/", align: right }
     css: styles.css
-    includes:
-      after_body: tracking.html
 runtime: shiny
 ---
 
@@ -28,22 +26,22 @@ library(scales)
 library(googlesheets4)
 
 # Assumes the Google Sheet with the data has been made public (view only / with link)
-sheets_deauth()
+gs4_deauth()
 
 # Get the ID for the Google Sheet where the results are stored. The technique below expects this
 # ID to be recorded in .Renviron more another environment file in a variable called "SPEEDTEST_GSHEET."
 # Alternatively, you can just hardcode the Google Sheets ID in a variable:
-# gsheet <- "[sheet ID]"
-gsheet <- Sys.getenv("SPEEDTEST_GSHEET")
+gsheet <- "1QFjCh1hqeu0UNFmXPrlLqKbzap2SkUw89TusOj2bYgM"
+# gsheet <- Sys.getenv("SPEEDTEST_GSHEET")
 
 # Set the timezone for displaying the results
 timezone <- "America/New_York"
 
 # Get the data and adjust the timezone
-download_data <- sheets_read(gsheet, "Download Data") %>%
+download_data <- read_sheet(gsheet, "Download Data") %>%
       mutate(test_time = with_tz(test_time, timezone))
 
-upload_data <- sheets_read(gsheet, "Upload Data") %>%
+upload_data <- read_sheet(gsheet, "Upload Data") %>%
       mutate(test_time = with_tz(test_time, timezone))
 
 # For faster loading, comment out the above after the data is downloaded and just

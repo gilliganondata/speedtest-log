@@ -22,7 +22,7 @@ gsheet <- Sys.getenv("SPEEDTEST_GSHEET")
 timezone <- "America/New_York"
 
 # Assumes the Google Sheet with the data has been made public (view only / with link)
-sheets_deauth()
+gs4_deauth()
 ```
 
 ## Get the Data
@@ -31,8 +31,8 @@ The data gets read from the Google Sheets file specified in the setup. There is 
 
 ```{r get_data, echo = FALSE, warning = FALSE, message = FALSE}
 
-download_data <- sheets_read(gsheet, "Download Data")
-upload_data <- sheets_read(gsheet, "Upload Data")
+download_data <- read_sheet(gsheet, "Download Data")
+upload_data <- read_sheet(gsheet, "Upload Data")
 
 ```
 
