@@ -10,6 +10,9 @@ library(speedtest)
 library(tidyverse)
 library(googlesheets4)
 
+# May need to run this periodically to auth
+# gs4_auth()
+
 # Get the ID for an existing Google Sheet that will have the results logged to it. This should
 # be stored in the .Renviron file, or it can be hard-coded below.
 
